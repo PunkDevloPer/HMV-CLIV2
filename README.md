@@ -60,7 +60,7 @@ sudo cp hmvcli /usr/bin #optional
 ```
 
 ## Uso
-Primero ejecuta el archivo bash setup o añade tu usuario y contraseña de HMV en las lineas 24 y 25.
+First run the -co --config command and enter your username and password
 
 Visualiza las máquinas disponibles y filtra por dificultad (easy, medium, hard, all)
 
