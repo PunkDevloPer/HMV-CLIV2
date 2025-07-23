@@ -1,4 +1,6 @@
 # 🇺🇸 HMV-cli (HackMyVM Command Line Interface)
+#Warning.. This project is a fork of the following repository: https://github.com/bitc0de/HMV-cli.git
+ I've only added a few features to it.
 
 ![HMV-cli](https://i.ibb.co/7V7vPVs/unknown.png)
 
@@ -71,6 +73,8 @@ Want to add features like interactive mode or auto-solver integration? Go ahead 
 ---
 
 # 🇪🇸 HMV-cli (Interfaz de línea de comandos para HackMyVM)
+#Advertencia.. este proyecto es un fork de el siguiente repositorio: https://github.com/bitc0de/HMV-cli.git
+solo le he agregado algunas funciones.
 
 ![HMV-cli](https://i.ibb.co/7V7vPVs/unknown.png)
 
