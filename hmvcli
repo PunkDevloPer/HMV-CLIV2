@@ -1,11 +1,11 @@
-#!/usr/bin/python3
+                                           #!/usr/bin/python3
 import argparse
-import os
-
-import gdown
 import requests
 from bs4 import BeautifulSoup
 from prettytable import PrettyTable
+import subprocess
+import sys
+
 
 
 class bcolors:
@@ -19,12 +19,25 @@ parser.add_argument('-m', '--machines', help='View machines by dificult. Ex: hmv
 parser.add_argument('-d', '--download', help='Download machine of hackmyvm. Ex: hmvcli.py -d Soul')
 parser.add_argument('-i', '--input', help='Input the flag for machine. Ex: hmvcli.py -i flag -vm Soul')
 parser.add_argument('-vm', '--vm', help='Machine name to insert the flag. Use with argument -i')
+parser.add_argument('-c', '--config', action='store_true', help='Run the setup script to configure credentials')
 args = vars(parser.parse_args())
 
-user="" #CHANGE
-password="" #CHANGE
+if args['config']:
+    print("[*] Ejecutando script de configuración...")
+    subprocess.run(["bash", "setup.sh"])  
+    sys.exit(0)
+
+
+user=""#CHANGE
+password=""#CHANGE
 
 def machines(levelglob):
+    color_map = {
+        '#28a745': 'Easy',
+        '#ffc107': 'Medium',
+        '#dc3545': 'Hard'
+    }
+
     machines_tab = PrettyTable(["Machine name", "Level", "Status", "Creator"])
 
     with requests.Session() as session:
@@ -36,75 +49,76 @@ def machines(levelglob):
         }
         login_send = session.post(login, data, allow_redirects=True)
 
-        # MACHINES
+        if "Logout" not in login_send.text:
+            print("error")
+            return
+        else:
+            print("login correcto")
+
+        # GET MACHINE TABLE
         machines_url = "https://hackmyvm.eu/machines/"
         get_machines = session.get(machines_url)
         soup = BeautifulSoup(get_machines.text, 'html.parser')
-        machines_div = soup.findAll('div', {'class': 'container mt-5'})
-        for machines in machines_div:
-            machines = machines.findAll('div', {'class': 'row'})
-            for machine in machines:
-                try:
-                    name = machine.find('a')
-                    level = machine.find('div', {'class': 'badge'})
-                    status_tohack = machine.find('div', {'class': 'badge badge-secondary'})
-                    status_hacked = machine.find('div', {'class': 'badge badge-light'})
-                    creator = machine.findAll('div', {'class': 'py-3 col'})
 
-                    if name.text == "Search":
-                        pass
-                    elif (level.text == "TO HACK") or (level.text == "HACKED"):
-                        pass
-                    elif (levelglob == "easy"):
-                        if (level.text == "Medium") or (level.text == "Hard"):
-                            pass
-                        else:
-                            if status_tohack:
-                                machines_tab.add_row([name.text, level.text, bcolors.WARNING + status_tohack.text + bcolors.ENDC, creator[1].text])
-                            else:
-                                machines_tab.add_row([name.text, level.text, bcolors.OKGREEN + status_hacked.text + bcolors.ENDC, creator[1].text])
-                    elif (levelglob == "medium"):
-                        if (level.text == "Easy") or (level.text == "easy") or (level.text == "Hard"):
-                            pass
-                        else:
-                            if status_tohack:
-                                machines_tab.add_row([name.text, level.text, bcolors.WARNING + status_tohack.text + bcolors.ENDC, creator[1].text])
-                            else:
-                                machines_tab.add_row([name.text, level.text, bcolors.OKGREEN + status_hacked.text + bcolors.ENDC, creator[1].text])
-                    elif (levelglob == "hard"):
-                        if (level.text == "Easy") or (level.text == "easy") or (level.text == "Medium"):
-                            pass
-                        else:
-                            if status_tohack:
-                                machines_tab.add_row([name.text, level.text, bcolors.WARNING + status_tohack.text + bcolors.ENDC, creator[1].text])
-                            else:
-                                machines_tab.add_row([name.text, level.text, bcolors.OKGREEN + status_hacked.text + bcolors.ENDC, creator[1].text])
-                    elif (levelglob == "all"):
-                        if status_tohack:
-                            machines_tab.add_row([name.text, level.text, bcolors.WARNING + status_tohack.text + bcolors.ENDC, creator[1].text])
-                        else:
-                            machines_tab.add_row([name.text, level.text, bcolors.OKGREEN + status_hacked.text + bcolors.ENDC, creator[1].text])
+        rows = soup.select("table.mt-1.table.table-striped.table-dark tbody tr")
 
-                    else:
-                        if status_tohack:
-                            machines_tab.add_row([name.text, level.text, bcolors.WARNING + status_tohack.text + bcolors.ENDC, creator[1].text])
-                        else:
-                            machines_tab.add_row([name.text, level.text, bcolors.OKGREEN + status_hacked.text + bcolors.ENDC, creator[1].text])
-                except:
-                    pass
+        for row in rows:
+            try:
+                # Nombre
+                name = row.find('h4', class_='vmname').text.strip()
+
+                # Nivel según color
+                color_style = row.find('div', style=lambda s: s and 'border-top' in s)['style']
+                color = color_style.split('solid')[-1].strip().rstrip(';')
+                level = color_map.get(color, 'Unknown')
+
+                # Estado
+                status_tag = row.find('span', class_='badge')
+                status_text = status_tag.text.strip() if status_tag else "?"
+
+                # Creador
+                creator = row.find_all('td')[1].text.strip()
+
+                # FILTRO
+                if levelglob == "easy" and level != "Easy":
+                    continue
+                elif levelglob == "medium" and level != "Medium":
+                    continue
+                elif levelglob == "hard" and level != "Hard":
+                    continue
+                elif levelglob not in ["easy", "medium", "hard", "all"]:
+                    continue
+
+                color_status = bcolors.WARNING + status_text + bcolors.ENDC if "TO HACK" in status_text else bcolors.OKGREEN + status_text + bcolors.ENDC
+
+                machines_tab.add_row([name, level, color_status, creator])
+
+            except Exception as e:
+                print(f"[!] Error con una máquina: {e}")
+                continue
 
     print(machines_tab)
 
 
+
 def download(machine_name):
-    url = "https://downloads.hackmyvm.eu/" + str(machine_name).lower() + ".zip"
-    url_gdrive = os.popen('curl -w "%{url_effective}\n" -I -L -s -S ' + url + ' -o /dev/null').read()
-    url_gdrive = url_gdrive.replace("https://drive.google.com/file/d/", "")
-    url_gdrive = url_gdrive.replace("/view?usp=sharing\n", "")
-    url_gdrive = "https://drive.google.com/uc?id=" + url_gdrive
     filename = str(machine_name).lower() + ".zip"
-    gdown.download(url_gdrive, filename, quiet=False)
-    print("[+] " + machine_name + " as been downloaded!")
+    url = f"https://downloads.hackmyvm.eu/{filename}"
+
+    try:
+        print(f"[+] Descargando {filename} desde HackMyVM...")
+        r = requests.get(url, stream=True)
+        r.raise_for_status()  
+
+        with open(filename, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        print(f"[✓] {machine_name} ha sido descargada con éxito.")
+    except requests.exceptions.HTTPError:
+        print(f"[!] No se encontró la máquina '{machine_name}'. ¿Nombre mal escrito?")
+    except Exception as e:
+        print(f"[!] Error durante la descarga: {e}")
 
 
 def sendFlag(flag, vm):
@@ -129,6 +143,7 @@ def sendFlag(flag, vm):
             print("[+] - The flag inserted is CORRECT!")
         else:
             print("[!] - Error")
+
 
 
 # ARGUMENTS
